@@ -19,15 +19,21 @@ class AutoEncoder(nn.Module):
         self.code_size = code_size
 
         # Encoder
-        self.enc_layer_1 = nn.Conv2d(1, 10, kernel_size=5)
-        self.enc_layer_2 = nn.Conv2d(10, 20, kernel_size=5)
+        self.enc_layer_1 = nn.Conv2d(1, 8, kernel_size=9, stride=2)
+        self.enc_layer_2 = nn.Conv2d(8, 16, kernel_size=7)
+        self.enc_layer_3 = nn.Conv2d(16, 32, kernel_size=5)
         #self.enc_linear_1 = nn.Linear(4*4*20, 50)
-        self.enc_linear_1 = nn.Linear(2000, 128)
-        self.enc_linear_2 = nn.Linear(128, self.code_size)
+        self.enc_linear_1 = nn.Linear(12*12*32, 2300)
+        self.enc_linear_2 = nn.Linear(2300, 1000)
+        self.enc_linear_3 = nn.Linear(1000, self.code_size)
 
         # Decoder
-        self.dec_linear_1 = nn.Linear(self.code_size, 160)
-        self.dec_linear_2 = nn.Linear(160, IMAGE_SIZE)
+        self.dec_linear_1 = nn.Linear(self.code_size, 1000)
+        self.dec_linear_2 = nn.Linear(1000, 2300)
+        self.dec_linear_3 = nn.Linear(2300, 12*12*32)
+        self.dec_layer_1 = nn.ConvTranspose2d(32, 16, kernel_size=5)
+        self.dec_layer_2 = nn.ConvTranspose2d(16, 8, kernel_size=7)
+        self.dec_layer_3 = nn.ConvTranspose2d(8, 1, kernel_size=9, stride=2, output_padding=1)
 
     def forward(self, images):
         code = self.encode(images)
@@ -35,22 +41,28 @@ class AutoEncoder(nn.Module):
         return out, code
 
     def encode(self, images):
-        code = self.enc_layer_1(images)
-        code = F.selu(F.max_pool2d(code, 2))
+        code = F.selu(self.enc_layer_1(images))
 
-        code = self.enc_layer_2(code)
-        code = F.selu(F.max_pool2d(code, 2))
+        code = F.selu(self.enc_layer_2(code))
+
+        code = F.selu(self.enc_layer_3(code))
 
         code = code.view([images.size(0), -1])
         code = F.selu(self.enc_linear_1(code))
-        code = self.enc_linear_2(code)
+        code = F.selu(self.enc_linear_2(code))
+        code = self.enc_linear_3(code)
 
         return code
 
     def decode(self, code):
         out = F.selu(self.dec_linear_1(code))
-        out = torch.sigmoid(self.dec_linear_2(out))
-        out = out.view([code.size(0), 1, IMAGE_WIDTH, IMAGE_HEIGHT])
+        out = F.selu(self.dec_linear_2(out))
+        out = F.selu(self.dec_linear_3(out))
+        out = out.view([code.size(0), 32, 12, 12])
+        out = F.selu(self.dec_layer_1(out))
+        out = F.selu(self.dec_layer_2(out))
+        out = F.selu(self.dec_layer_3(out))
+        # out = out.view([code.size(0), 1, IMAGE_WIDTH, IMAGE_HEIGHT])
 
         return out
 
@@ -59,10 +71,11 @@ IMAGE_SIZE = 2704
 IMAGE_WIDTH = IMAGE_HEIGHT = 52
 
 # Hyper params
-code_size = 20
-num_epochs = 5
-batch_size = 16
+code_size = 120
+num_epochs = 5000
+batch_size = 128
 lr = 0.002
+board_num=1
 optimizer_cls = optim.Adam
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -72,10 +85,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, batch_size=batch_size, num_workers=4, drop_last=True, pin_memory=True)
 
 print("Gathering training data...")
-train_data = dataset(root_dir="/home/joshua/Desktop/Work/ConvAutoencoder/data/trainingData", transform=None, prefix="trainingDataBoards20")
+train_data = dataset(root_dir="/home/joshua/Desktop/ConvAutoencoder/data/trainingData", transform=None, prefix="trainingDataBoards1.npy")
 print("Gathering testing data...")
-test_data = dataset(root_dir="/media/joshua/TOSHIBA EXT 2/testData", transform=None, prefix="testDataBoards1.npy")
-train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, batch_size=batch_size, drop_last=True, pin_memory=True) # dropped num_workers = 4
+test_data = dataset(root_dir="/home/joshua/Desktop/ConvAutoencoder/data/testData", transform=None, prefix="testDataBoards1.npy")
+train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, num_workers=7, batch_size=batch_size, drop_last=True, pin_memory=True) # dropped num_workers = 4
 
 # Visualising the trainingData (Only run this with small dataset)
 # vis_1, vis_2, vis_3 = random.choice(train_data), random.choice(train_data), random.choice(train_data)
@@ -92,7 +105,7 @@ print("There are " + str(len(train_data)) + " samples in the training set.\n")
 
 autoencoder = AutoEncoder(code_size)
 autoencoder.to(device)
-loss_fn = nn.BCELoss()
+loss_fn = nn.MSELoss()
 optimizer = optimizer_cls(autoencoder.parameters(), lr=lr)
 
 # Training loop
@@ -100,23 +113,24 @@ for epoch in range(num_epochs):
     print("Epoch %d" % epoch)
 
     for i, (images, nexts) in enumerate(train_loader):    # Ignore image labels
-        print("On loop " + str(i) + " pos 1")
         images = images.unsqueeze(1).float()
-        print("On loop " + str(i) + " pos 2")
         images = images.to(device)
-        print("On loop " + str(i) + " pos 3")
         nexts = nexts.unsqueeze(1).float()
-        print("On loop " + str(i) + " pos 4")
         nexts = nexts.to(device)
-        print("On loop " + str(i) + " pos 5")
         out, code = autoencoder(Variable(images))
-        print("On loop " + str(i) + " pos 6")
         optimizer.zero_grad()
         loss = loss_fn(out, nexts)
         loss.backward()
         optimizer.step()
 
     print("Loss = %.3f" % loss.data)
+
+    if (epoch+1)%5==0:
+        torch.save(autoencoder.state_dict, "model_checkpoint.pth")
+        print("\n Next file...")
+        board_num=board_num+1
+        train_data = dataset(root_dir="/home/joshua/Desktop/ConvAutoencoder/data/trainingData", transform=None, prefix="trainingDataBoards"+str(board_num)+".npy")
+        train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, num_workers=7, batch_size=batch_size, drop_last=True, pin_memory=True)
 
 # Try reconstructing on test data
 test_image = random.choice(test_data)

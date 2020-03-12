@@ -131,3 +131,9 @@ dmypy.json
 # Pipenv
 Pipfile
 Pipfile.lock
+
+# Ignore trainig, testing and validation data
+data/
+
+# Ignore memmap buffer data
+*.buffer

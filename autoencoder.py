@@ -1,6 +1,6 @@
 import random
 
-from loader import SnakeGameDataset as loader
+from loader import SnakeGameDataset as dataset
 
 import torch
 from   torch.autograd import Variable
@@ -9,6 +9,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 from   torchvision import datasets, transforms
+
+import matplotlib.pyplot as plt
 
 
 class AutoEncoder(nn.Module):
@@ -19,8 +21,9 @@ class AutoEncoder(nn.Module):
         # Encoder
         self.enc_layer_1 = nn.Conv2d(1, 10, kernel_size=5)
         self.enc_layer_2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.enc_linear_1 = nn.Linear(4*4*20, 50)
-        self.enc_linear_2 = nn.Linear(50, self.code_size)
+        #self.enc_linear_1 = nn.Linear(4*4*20, 50)
+        self.enc_linear_1 = nn.Linear(2000, 128)
+        self.enc_linear_2 = nn.Linear(128, self.code_size)
 
         # Decoder
         self.dec_linear_1 = nn.Linear(self.code_size, 160)
@@ -57,8 +60,8 @@ IMAGE_WIDTH = IMAGE_HEIGHT = 52
 
 # Hyper params
 code_size = 20
-num_epochs = 1
-batch_size = 200
+num_epochs = 5
+batch_size = 128
 lr = 0.002
 optimizer_cls = optim.Adam
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -68,7 +71,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # test_data  = datasets.MNIST('~/data/mnist/', train=False, transform=transforms.ToTensor(), download=True)
 # train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, batch_size=batch_size, num_workers=4, drop_last=True, pin_memory=True)
 
-train_loader = loader()
+train_data = dataset(transform=None)
+test_data = dataset(root_dir="/media/joshua/TOSHIBA EXT 2/testData", transform=None, prefix="testDataBoards1.npy")
+train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, batch_size=batch_size, num_workers=4, drop_last=True, pin_memory=True)
+
+# Visualising the trainingData
+vis_1, vis_2, vis_3 = random.choice(train_data), random.choice(train_data), random.choice(train_data)
+_, (ax1, ax2, ax3) = plt.subplots(3, 2)
+ax1[0].imshow(vis_1[0])
+ax1[1].imshow(vis_1[1])
+ax2[0].imshow(vis_2[0])
+ax2[1].imshow(vis_2[1])
+ax3[0].imshow(vis_3[0])
+ax3[1].imshow(vis_3[1])
+plt.savefig("visualisation.png")
 
 autoencoder = AutoEncoder(code_size)
 autoencoder.to(device)
@@ -79,8 +95,10 @@ optimizer = optimizer_cls(autoencoder.parameters(), lr=lr)
 for epoch in range(num_epochs):
     print("Epoch %d" % epoch)
 
-    for i, (images, nexts) in enumerate(train_loader.read()):    # Ignore image labels
+    for i, (images, nexts) in enumerate(train_loader):    # Ignore image labels
+        images = images.unsqueeze(1).float()
         images = images.to(device)
+        nexts = nexts.unsqueeze(1).float()
         nexts = nexts.to(device)
         out, code = autoencoder(Variable(images))
 
@@ -92,11 +110,11 @@ for epoch in range(num_epochs):
     print("Loss = %.3f" % loss.data)
 
 # Try reconstructing on test data
-# test_image = random.choice(test_data)
-# test_image = test_image[0]
-# test_image = test_image.unsqueeze(0)
-# test_image = Variable(test_image.to(device))
-# test_reconst, _ = autoencoder(test_image)
-#
-# torchvision.utils.save_image(test_image, 'orig.png')
-# torchvision.utils.save_image(test_reconst, 'reconst.png')
+test_image = random.choice(test_data)
+test_image = test_image[0]
+test_image = torch.from_numpy(test_image).unsqueeze(0).unsqueeze(1).float()
+test_image = Variable(test_image.to(device))
+test_reconst, _ = autoencoder(test_image)
+
+torchvision.utils.save_image(test_image, 'orig.png')
+torchvision.utils.save_image(test_reconst, 'reconst.png')

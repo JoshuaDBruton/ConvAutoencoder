@@ -4,10 +4,10 @@ import os
 
 class SnakeGameDataset(Dataset):
 
-    def __init__(self, root_dir="/media/joshua/TOSHIBA EXT 2/trainingData/", transform=None):
+    def __init__(self, root_dir="/media/joshua/TOSHIBA EXT 2/trainingData/", transform=None, prefix="trainingDataBoards1.npy"):
         self.root_dir = root_dir
         self.transform = transform
-        self.prefix = "trainingDataBoards"
+        self.prefix = prefix
 
         files = []
         for f in os.listdir(self.root_dir):
@@ -20,25 +20,31 @@ class SnakeGameDataset(Dataset):
         cols = None
         dtype = None
         for data_file in files:
-            print(data_file)
             data = np.load(data_file)
             rows += data.shape[0]
             cols = data.shape[1]
             dtype = data.dtype
 
         # Once the size is know create memmap and write chunks
-        merged = np.memmap('merged.buffer', dtype=dtype, mode='w+', shape=(rows, cols))
+        self.merged = np.memmap('merged.buffer', dtype=dtype, mode='w+', shape=(rows, cols))
         idx = 0
         for data_file in files:
-            print(data_file)
             data = np.load(data_file)
-            merged[idx:idx + len(data)] = data
+            self.merged[idx:idx + len(data)] = data
             idx += len(data)
 
-        print(merged.shape)
+        self.merged = np.memmap.reshape(self.merged, (self.merged.shape[0]//2,2,52,52))
 
     def __len__(self):
-        return 400*10000
+        return self.merged.shape[0]
 
     def __getitem__(self, idx):
-        pass
+        x = self.merged[idx,0]
+        y = self.merged[idx, 1]
+
+        sample = (np.array(np.reshape(x, (52,52))), np.array(np.reshape(y, (52,52))))
+
+        if self.transform:
+            sample = self.transform(sample)
+
+        return sample

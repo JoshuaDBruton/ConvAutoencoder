@@ -10,29 +10,37 @@ class SnakeGameDataset(Dataset):
         self.prefix = prefix
 
         files = []
-        for f in os.listdir(self.root_dir):
+        for i, f in enumerate(os.listdir(self.root_dir)):
             if os.path.isfile(os.path.join(self.root_dir,f)) and self.prefix in f and "trainingDataBoards400" not in f:
                 files.append(os.path.join(self.root_dir, f))
+            if i+1<len(os.listdir(self.root_dir)):
+                if (i+1)%100==0:
+                    print('[' + str(i+1) + '] ' + str(np.round(((i+1)/len(os.listdir(self.root_dir)))*100,2)) + '%', end='\r')
+            else:
+                print('[' + str(i+1) + '] ' + str(np.round(((i+1)/len(os.listdir(self.root_dir)))*100,2)) + '%', end='\n')
 
+        print("Reading data from " + str(len(files)) + " files")
         # If you do not know the final size beforehand you need to
         # go through the chunks once first to check their sizes
         rows = 0
         cols = None
         dtype = None
-        for data_file in files:
+        print("Measuring...")
+        for i, data_file in enumerate(files):
             data = np.load(data_file)
             rows += data.shape[0]
             cols = data.shape[1]
             dtype = data.dtype
 
-        # Once the size is know create memmap and write chunks
+        print("Reading...")
+        # Once the size is known create memmap and write chunks
         self.merged = np.memmap('merged.buffer', dtype=dtype, mode='w+', shape=(rows, cols))
         idx = 0
-        for data_file in files:
+        for i, data_file in enumerate(files):
             data = np.load(data_file)
             self.merged[idx:idx + len(data)] = data
             idx += len(data)
-
+        print("Done.\n")
         self.merged = np.memmap.reshape(self.merged, (self.merged.shape[0]//2,2,52,52))
 
     def __len__(self):

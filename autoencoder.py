@@ -61,7 +61,7 @@ IMAGE_WIDTH = IMAGE_HEIGHT = 52
 # Hyper params
 code_size = 20
 num_epochs = 5
-batch_size = 128
+batch_size = 16
 lr = 0.002
 optimizer_cls = optim.Adam
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -71,20 +71,24 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # test_data  = datasets.MNIST('~/data/mnist/', train=False, transform=transforms.ToTensor(), download=True)
 # train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, batch_size=batch_size, num_workers=4, drop_last=True, pin_memory=True)
 
-train_data = dataset(transform=None)
+print("Gathering training data...")
+train_data = dataset(root_dir="/home/joshua/Desktop/Work/ConvAutoencoder/data/trainingData", transform=None, prefix="trainingDataBoards20")
+print("Gathering testing data...")
 test_data = dataset(root_dir="/media/joshua/TOSHIBA EXT 2/testData", transform=None, prefix="testDataBoards1.npy")
-train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, batch_size=batch_size, num_workers=4, drop_last=True, pin_memory=True)
+train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, batch_size=batch_size, drop_last=True, pin_memory=True) # dropped num_workers = 4
 
-# Visualising the trainingData
-vis_1, vis_2, vis_3 = random.choice(train_data), random.choice(train_data), random.choice(train_data)
-_, (ax1, ax2, ax3) = plt.subplots(3, 2)
-ax1[0].imshow(vis_1[0])
-ax1[1].imshow(vis_1[1])
-ax2[0].imshow(vis_2[0])
-ax2[1].imshow(vis_2[1])
-ax3[0].imshow(vis_3[0])
-ax3[1].imshow(vis_3[1])
-plt.savefig("visualisation.png")
+# Visualising the trainingData (Only run this with small dataset)
+# vis_1, vis_2, vis_3 = random.choice(train_data), random.choice(train_data), random.choice(train_data)
+# _, (ax1, ax2, ax3) = plt.subplots(3, 2)
+# ax1[0].imshow(vis_1[0])
+# ax1[1].imshow(vis_1[1])
+# ax2[0].imshow(vis_2[0])
+# ax2[1].imshow(vis_2[1])
+# ax3[0].imshow(vis_3[0])
+# ax3[1].imshow(vis_3[1])
+# plt.savefig("visualisation.png")
+
+print("There are " + str(len(train_data)) + " samples in the training set.\n")
 
 autoencoder = AutoEncoder(code_size)
 autoencoder.to(device)
@@ -96,12 +100,17 @@ for epoch in range(num_epochs):
     print("Epoch %d" % epoch)
 
     for i, (images, nexts) in enumerate(train_loader):    # Ignore image labels
+        print("On loop " + str(i) + " pos 1")
         images = images.unsqueeze(1).float()
+        print("On loop " + str(i) + " pos 2")
         images = images.to(device)
+        print("On loop " + str(i) + " pos 3")
         nexts = nexts.unsqueeze(1).float()
+        print("On loop " + str(i) + " pos 4")
         nexts = nexts.to(device)
+        print("On loop " + str(i) + " pos 5")
         out, code = autoencoder(Variable(images))
-
+        print("On loop " + str(i) + " pos 6")
         optimizer.zero_grad()
         loss = loss_fn(out, nexts)
         loss.backward()

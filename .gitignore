@@ -137,3 +137,7 @@ data/
 
 # Ignore memmap buffer data
 *.buffer
+
+# Ignore PyTorch models
+*.pt
+*.pth

@@ -129,7 +129,7 @@ for epoch in range(num_epochs):
         torch.save(autoencoder.state_dict, "model_checkpoint.pth")
         print("\n Next file...")
         board_num=board_num+1
-        if board_num = 399:
+        if board_num == 399:
             board_num = 1
         train_data = dataset(root_dir="/home/joshua/Desktop/ConvAutoencoder/data/trainingData", transform=None, prefix="trainingDataBoards"+str(board_num)+".npy")
         train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, num_workers=7, batch_size=batch_size, drop_last=True, pin_memory=True)

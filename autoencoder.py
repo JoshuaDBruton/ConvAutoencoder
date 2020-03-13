@@ -85,9 +85,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, batch_size=batch_size, num_workers=4, drop_last=True, pin_memory=True)
 
 print("Gathering training data...")
-train_data = dataset(root_dir="/home/joshua/Desktop/ConvAutoencoder/data/trainingData", transform=None, prefix="trainingDataBoards1.npy")
+train_data = dataset(root_dir="/home/joshua/Desktop/Work/ConvAutoencoder/data/trainingData", transform=None, prefix="trainingDataBoards1.npy")
 print("Gathering testing data...")
-test_data = dataset(root_dir="/home/joshua/Desktop/ConvAutoencoder/data/testData", transform=None, prefix="testDataBoards1.npy")
+test_data = dataset(root_dir="/home/joshua/Desktop/Work/ConvAutoencoder/data/testData", transform=None, prefix="testDataBoards1.npy")
 train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, num_workers=7, batch_size=batch_size, drop_last=True, pin_memory=True) # dropped num_workers = 4
 
 # Visualising the trainingData (Only run this with small dataset)
@@ -96,7 +96,7 @@ train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, num_workers
 # ax1[0].imshow(vis_1[0])
 # ax1[1].imshow(vis_1[1])
 # ax2[0].imshow(vis_2[0])
-# ax2[1].imshow(vis_2[1])
+# ax2[1].imshow(vis_2[1])i
 # ax3[0].imshow(vis_3[0])
 # ax3[1].imshow(vis_3[1])
 # plt.savefig("visualisation.png")
@@ -129,6 +129,8 @@ for epoch in range(num_epochs):
         torch.save(autoencoder.state_dict, "model_checkpoint.pth")
         print("\n Next file...")
         board_num=board_num+1
+        if board_num = 399:
+            board_num = 1
         train_data = dataset(root_dir="/home/joshua/Desktop/ConvAutoencoder/data/trainingData", transform=None, prefix="trainingDataBoards"+str(board_num)+".npy")
         train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, num_workers=7, batch_size=batch_size, drop_last=True, pin_memory=True)
 

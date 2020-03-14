@@ -72,8 +72,8 @@ IMAGE_WIDTH = IMAGE_HEIGHT = 52
 
 # Hyper params
 code_size = 120
-num_epochs = 5000
-batch_size = 128
+num_epochs = 50
+batch_size = 64
 lr = 0.002
 board_num=1
 optimizer_cls = optim.Adam
@@ -126,6 +126,14 @@ for epoch in range(num_epochs):
     print("Loss = %.3f" % loss.data)
 
     if (epoch+1)%5==0:
+        # Try reconstructing on test data
+        test_image = random.choice(test_data)
+        test_image = test_image[0]
+        test_image = torch.from_numpy(test_image).unsqueeze(0).unsqueeze(1).float()
+        test_image = Variable(test_image.to(device))
+        test_reconst, _ = autoencoder(test_image)
+        torchvision.utils.save_image(test_image, 'orig.png')
+        torchvision.utils.save_image(test_reconst, 'reconst.png')
         torch.save(autoencoder.state_dict(), "model_checkpoint.pth")
         print("\n Next file...")
         board_num=board_num+1
@@ -133,13 +141,3 @@ for epoch in range(num_epochs):
             board_num = 1
         train_data = dataset(root_dir="/home/joshua/Desktop/ConvAutoencoder/data/trainingData", transform=None, prefix="trainingDataBoards"+str(board_num)+".npy")
         train_loader = torch.utils.data.DataLoader(train_data, shuffle=True, num_workers=7, batch_size=batch_size, drop_last=True, pin_memory=True)
-
-# Try reconstructing on test data
-test_image = random.choice(test_data)
-test_image = test_image[0]
-test_image = torch.from_numpy(test_image).unsqueeze(0).unsqueeze(1).float()
-test_image = Variable(test_image.to(device))
-test_reconst, _ = autoencoder(test_image)
-
-torchvision.utils.save_image(test_image, 'orig.png')
-torchvision.utils.save_image(test_reconst, 'reconst.png')

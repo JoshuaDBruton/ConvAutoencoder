@@ -19,8 +19,8 @@ class param:
     bs = 8
     num_workers = 4
     lr = 0.001
-    epochs = 6
-    unet_depth = 500
+    epochs = 500
+    unet_depth = 5
     unet_start_filters = 8
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
